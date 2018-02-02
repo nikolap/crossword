@@ -8,12 +8,6 @@
   (:import goog.Uri
            goog.net.Jsonp))
 
-(def key-codes {32 :space
-                37 :left
-                38 :up
-                39 :right
-                40 :down})
-
 (defn do-jsonp
   [uri callback]
   (let [req (Jsonp. (Uri. uri))]
@@ -96,53 +90,52 @@
 (defn flip-orientation [orientation]
   (if (= :row orientation) :col :row))
 
-(defn move-horizontal [{:keys [core/puzzle]} row col change]
-  (let [rows    (get-in puzzle [:size :rows])
-        new-val (+ row change)]
-    [(if (and (>= new-val 0)
-              (< new-val rows))
-       new-val
-       row) col]))
+;; TODO: wrap around
+(defn move [{:keys [rows cols] :as size} puzzle row col orientation change]
+  (let [new-x (if (= orientation :row) row (+ row change))
+        new-y (if (= orientation :col) col (+ col change))]
+    (if-let [{:keys [black?]} (get-in puzzle [new-x new-y])]
+      (if black?
+        (move size puzzle row col orientation (+ change change))
+        [new-x new-y])
+      [row col])))
 
-(defn move-vertical [{:keys [core/puzzle]} row col change]
-  (let [rows    (get-in puzzle [:size :rows])
-        new-val (+ col change)]
-    [row (if (and (>= new-val 0)
-                  (< new-val rows))
-           new-val
-           col)]))
+(defn delete-code? [key-code]
+  (contains? #{46 8} key-code))
 
-(defn handle-key-press [db row col pressed-key]
-  (case pressed-key
-    :left (move-vertical db row col -1)
-    :right (move-vertical db row col 1)
-    :up (move-horizontal db row col -1)
-    :down (move-horizontal db row col 1)
-    [row col]))
+(defn alpha-code? [key-code]
+  (and (>= key-code 65)
+       (<= key-code 90)))
 
-;; move forward
-;; move back
-;; no move
+(defn answer-code? [key-code]
+  (or (alpha-code? key-code)
+      (delete-code? key-code)))
 
 (re-frame/reg-event-fx
   :core/handle-key-down
-  (fn [{:keys [db]} [_ row col key-code]]
-    (if-let [pressed-key (get key-codes key-code)]
-      (let [horizontal? (contains? #{:left :right} pressed-key)
-            vertical?   (contains? #{:up :down} pressed-key)]
-        {:db       (cond
-                     (= :space pressed-key) (update db :core/orientation flip-orientation)
-                     horizontal? (assoc db :core/orientation :row)
-                     vertical? (assoc db :core/orientation :col)
-                     :else db)
-         :dispatch [:core/set-active-cell (handle-key-press db row col pressed-key)]})
-      (merge
-        {:db         db
-         :dispatch-n [[:core/set-answer row col (char key-code)]
-                      (when (re-find utils/alpha-regex (char key-code))
-                        [:core/set-active-cell (if (= (:core/orientation db) :row)
-                                                 (move-vertical db row col 1)
-                                                 (move-horizontal db row col 1))])]}))))
+  [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
+  (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code]]
+    (let [orientation (:core/orientation db)
+          size (get-in db [:core/puzzle :size])]
+      {:db (case key-code
+             32 (update db :core/orientation flip-orientation)
+             37 (assoc db :core/orientation :row)
+             39 (assoc db :core/orientation :row)
+             38 (assoc db :core/orientation :col)
+             40 (assoc db :core/orientation :col)
+             db)
+       :dispatch-n [(when (answer-code? key-code)
+                      [:core/set-answer row col (if (delete-code? key-code)
+                                                  ""
+                                                  (char key-code))])
+                    [:core/set-active-cell (cond
+                                             (= 37 key-code) (move size puzzle-for-display row col :row -1)
+                                             (= 38 key-code) (move size puzzle-for-display row col :col -1)
+                                             (= 39 key-code) (move size puzzle-for-display row col :row 1)
+                                             (= 40 key-code) (move size puzzle-for-display row col :col 1)
+                                             (alpha-code? key-code) (move size puzzle-for-display row col orientation 1)
+                                             (= 8 key-code) (move size puzzle-for-display row col orientation -1)
+                                             :else [row col])]]})))
 
 (re-frame/reg-event-fx
   :core/check-answers

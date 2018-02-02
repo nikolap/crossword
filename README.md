@@ -1,6 +1,8 @@
 # crossword
 
-A [re-frame](https://github.com/Day8/re-frame) application designed to ... well, that part is up to you.
+A [re-frame](https://github.com/Day8/re-frame) application to play crosswords (from the NYT).
+
+See https://s3.amazonaws.com/nikolaperic-public/crossword/index.html to play demo or clone and make your own tweaks.
 
 ## Development Mode
 
