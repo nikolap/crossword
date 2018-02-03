@@ -12,7 +12,7 @@
        [:h1 "Word."]
        [:label
         {:for "date"}
-        "Enter YYYY-MM-DD or 'current' or 'random' without quotes. e.g. 2018-15-01 or current or random"]
+        "Enter YYYY-MM-DD or 'current' or 'random' without quotes. e.g. 2018-01-15 or current or random"]
        [:input
         {:value       @date
          :id          "date"
@@ -86,7 +86,7 @@
                         (when (= @opposite-clue full-clue) "clue-highlighted"))
         :data-clue full-clue}
        [:span.clue-num grid-num]
-       [:span-clue-text clue-text]])))
+       [:span.clue-text clue-text]])))
 
 (defn clue-list [label items id]
   [:div.column.clue-container

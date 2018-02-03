@@ -23,15 +23,19 @@
 }
 
 .clue-num {
+    font-size: 1.25em;
     font-weight: 700;
     margin-right: 10px;
     text-align: right;
     min-width: 24px;
     width: 24px;
+    color: #9b4dca;
 }
 
 .clue-text {
     margin-left: 5px;
+    font-size: 1.25em;
+    font-weight: 700;
 }
 
 .clue-filled {
@@ -79,11 +83,11 @@ ol, ul {
 
 .number {
     color: #444;
-    font-size: 0.9em;
+    font-size: 1.1em;
     font-weight: bold;
     position: absolute;
-    top: -1px;
-    left: 1px;
+    top: -6px;
+    left: -1px;
 }
 
 .cell-input {
@@ -92,7 +96,7 @@ ol, ul {
     padding: 0em;
     border: none;
     text-align: center;
-    font-size: 1.7em;
+    font-size: 1.6em;
     color: #7b35a5;
     z-index: 10;
     cursor: pointer;
@@ -112,14 +116,14 @@ ol, ul {
     font-weight: bold;
 }
 
+.incorrect-answer input {
+    background-color: #ffb6b6;
+}
+
 .active-clue input {
     background-color: #a7d8ff;
 }
 
 .active-cell input {
     background-color: #ffff58;
-}
-
-.incorrect-answer {
-    border-color: red;
 }

@@ -62,8 +62,7 @@
 (re-frame/reg-event-fx
   :core/get-puzzle
   (fn [{:keys [db]} [_ date]]
-    {:db    (assoc db :core/orientation :row
-                      :core/set-active-cell [0 0])
+    {:db    (assoc db :core/orientation :row)
      ::http {:uri        (str "https://www.xwordinfo.com/JSON/Data.aspx?date=" (or date "current"))
              :on-success [:core/add-puzzle]}}))
 
@@ -90,15 +89,20 @@
 (defn flip-orientation [orientation]
   (if (= :row orientation) :col :row))
 
-;; TODO: wrap around
-(defn move [{:keys [rows cols] :as size} puzzle row col orientation change]
-  (let [new-x (if (= orientation :row) row (+ row change))
-        new-y (if (= orientation :col) col (+ col change))]
-    (if-let [{:keys [black?]} (get-in puzzle [new-x new-y])]
-      (if black?
-        (move size puzzle row col orientation (+ change change))
-        [new-x new-y])
-      [row col])))
+(defn move [{:keys [rows cols] :as size} puzzle row col orientation change multiplier]
+  (let [total-change (* multiplier change)
+        new-x        (if (= orientation :row) row (+ row total-change))
+        new-y        (if (= orientation :col) col (+ col total-change))]
+    (cond
+      (< new-x 0) (move size puzzle (dec rows) (dec col) orientation change 0)
+      (>= new-x cols) (move size puzzle 0 (inc col) orientation change 0)
+      (< new-y 0) (move size puzzle (dec row) (dec cols) orientation change 0)
+      (>= new-y rows) (move size puzzle (inc row) 0 orientation change 0)
+      :else (if-let [{:keys [black?]} (get-in puzzle [new-x new-y])]
+              (if black?
+                (move size puzzle row col orientation change (inc multiplier))
+                [new-x new-y])
+              [row col]))))
 
 (defn delete-code? [key-code]
   (contains? #{46 8} key-code))
@@ -111,30 +115,34 @@
   (or (alpha-code? key-code)
       (delete-code? key-code)))
 
+(re-frame/reg-event-db
+  :core/reset-check
+  (fn [db [_ row col]]
+    (assoc-in db [:core/checks row col] nil)))
+
 (re-frame/reg-event-fx
   :core/handle-key-down
   [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
   (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code]]
     (let [orientation (:core/orientation db)
-          size (get-in db [:core/puzzle :size])]
-      {:db (case key-code
-             32 (update db :core/orientation flip-orientation)
-             37 (assoc db :core/orientation :row)
-             39 (assoc db :core/orientation :row)
-             38 (assoc db :core/orientation :col)
-             40 (assoc db :core/orientation :col)
-             db)
-       :dispatch-n [(when (answer-code? key-code)
-                      [:core/set-answer row col (if (delete-code? key-code)
-                                                  ""
-                                                  (char key-code))])
+          size        (get-in db [:core/puzzle :size])
+          answer?     (answer-code? key-code)]
+      {:db         (case key-code
+                     32 (update db :core/orientation flip-orientation)
+                     37 (assoc db :core/orientation :row)
+                     39 (assoc db :core/orientation :row)
+                     38 (assoc db :core/orientation :col)
+                     40 (assoc db :core/orientation :col)
+                     db)
+       :dispatch-n [(when answer? [:core/set-answer row col (if (delete-code? key-code) "" (char key-code))])
+                    (when answer? [:core/reset-check row col])
                     [:core/set-active-cell (cond
-                                             (= 37 key-code) (move size puzzle-for-display row col :row -1)
-                                             (= 38 key-code) (move size puzzle-for-display row col :col -1)
-                                             (= 39 key-code) (move size puzzle-for-display row col :row 1)
-                                             (= 40 key-code) (move size puzzle-for-display row col :col 1)
-                                             (alpha-code? key-code) (move size puzzle-for-display row col orientation 1)
-                                             (= 8 key-code) (move size puzzle-for-display row col orientation -1)
+                                             (= 37 key-code) (move size puzzle-for-display row col :row -1 1)
+                                             (= 38 key-code) (move size puzzle-for-display row col :col -1 1)
+                                             (= 39 key-code) (move size puzzle-for-display row col :row 1 1)
+                                             (= 40 key-code) (move size puzzle-for-display row col :col 1 1)
+                                             (alpha-code? key-code) (move size puzzle-for-display row col orientation 1 1)
+                                             (= 8 key-code) (move size puzzle-for-display row col orientation -1 1)
                                              :else [row col])]]})))
 
 (re-frame/reg-event-fx
@@ -147,6 +155,8 @@
                             (fn [r row]
                               (vec (map-indexed
                                      (fn [c cell]
-                                       (= (get-in puzzle-for-display [r c :answer]) cell))
+                                       (let [ans (get-in puzzle-for-display [r c :answer])]
+                                         (or (= ans cell)
+                                             (= "." ans))))
                                      row)))
                             answers)))})))
