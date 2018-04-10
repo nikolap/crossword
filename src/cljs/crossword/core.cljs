@@ -4,7 +4,8 @@
             [crossword.events :as events]
             [crossword.views :as views]
             [crossword.config :as config]
-            [crossword.extensions]))
+            [crossword.extensions]
+            [com.degel.re-frame.storage]))
 
 
 (defn dev-setup []

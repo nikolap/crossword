@@ -1,5 +1,6 @@
 (ns crossword.events
-  (:require [re-frame.core :as re-frame]
+  (:require [cljs.tools.reader :as reader]
+            [re-frame.core :as re-frame]
             [reframe-utils.core :as rf-utils]
             [crossword.db :as db]
             [clojure.string :as string]
@@ -41,10 +42,11 @@
       (scroll-to across-list across-clue)
       (scroll-to down-list down-clue))))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
   ::initialize-db
-  (fn [_ _]
-    db/default-db))
+  [(re-frame/inject-cofx :storage/get {:name :cows-crossword/db})]
+  (fn [{stored-db :storage/get} _]
+    {:db (or (reader/read-string stored-db) db/default-db)}))
 
 (rf-utils/multi-generation
   rf-utils/reg-set-event
@@ -66,17 +68,21 @@
      ::http {:uri        (str "https://www.xwordinfo.com/JSON/Data.aspx?date=" (or date "current"))
              :on-success [:core/add-puzzle]}}))
 
-(re-frame/reg-event-db
+(re-frame/reg-event-fx
   :core/set-answer
-  (fn [db [_ row col ans]]
-    (assoc-in db
-              [:core/answers row col]
-              (if (re-find utils/alpha-regex ans)
-                (-> ans
-                    last
-                    str
-                    string/upper-case)
-                ""))))
+  (fn [{:keys [db]} [_ row col ans]]
+    (let [new-state (assoc-in db
+                              [:core/answers row col]
+                              (if (re-find utils/alpha-regex ans)
+                                (-> ans
+                                    last
+                                    str
+                                    string/upper-case)
+                                ""))]
+      {:db          new-state
+       :storage/set {:session? false
+                     :name     :cows-crossword/db
+                     :value    new-state}})))
 
 (re-frame/reg-event-fx
   :core/set-active-cell
@@ -123,7 +129,7 @@
 (re-frame/reg-event-fx
   :core/handle-key-down
   [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
-  (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code]]
+  (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code ctrl-key?]]
     (let [orientation (:core/orientation db)
           size        (get-in db [:core/puzzle :size])
           answer?     (answer-code? key-code)]
@@ -136,6 +142,9 @@
                      db)
        :dispatch-n [(when answer? [:core/set-answer row col (if (delete-code? key-code) "" (char key-code))])
                     (when answer? [:core/reset-check row col])
+                    (when (and ctrl-key? (= key-code 74)) [:core/check-answers])
+                    (when (and ctrl-key? (= key-code 75)) [:core/set-answer row col
+                                                           (get-in puzzle-for-display [row col :answer])])
                     [:core/set-active-cell (cond
                                              (= 37 key-code) (move size puzzle-for-display row col :row -1 1)
                                              (= 38 key-code) (move size puzzle-for-display row col :col -1 1)

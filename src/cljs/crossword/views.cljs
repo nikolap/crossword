@@ -24,7 +24,8 @@
          "Load"]
         [:button
          {:on-click #(re-frame/dispatch [:core/check-answers])}
-         "Check Answers"]]])))
+         "Check Answers (Ctrl+J)"]
+        [:p "Hit Ctrl+K to reveal a cell's letter/answer."]]])))
 
 (defn clue-panel []
   (let [active-clue (re-frame/subscribe [:core/active-clue])]
@@ -51,7 +52,7 @@
           {:value       @current
            :tab-index   -1
            :on-click    #(re-frame/dispatch [:core/set-active-cell [r-idx c-idx]])
-           :on-key-down #(re-frame/dispatch [:core/handle-key-down r-idx c-idx (.-keyCode %)])
+           :on-key-down #(re-frame/dispatch [:core/handle-key-down r-idx c-idx (.-keyCode %) (.-ctrlKey %)])
            :data-x      r-idx
            :data-y      c-idx}])
        (when-not black?
