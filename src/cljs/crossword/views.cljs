@@ -52,7 +52,13 @@
           {:value       @current
            :tab-index   -1
            :on-click    #(re-frame/dispatch [:core/set-active-cell [r-idx c-idx]])
-           :on-key-down #(re-frame/dispatch [:core/handle-key-down r-idx c-idx (.-keyCode %) (.-ctrlKey %)])
+           :on-key-down (fn [e]
+                          (let [ctrl-key? (.-ctrlKey e)
+                                key-code  (.-keyCode e)]
+                            (when (or (and ctrl-key? (= key-code 74))
+                                      (and ctrl-key? (= key-code 75)))
+                              (.preventDefault e))
+                            (re-frame/dispatch [:core/handle-key-down r-idx c-idx key-code ctrl-key?])))
            :data-x      r-idx
            :data-y      c-idx}])
        (when-not black?

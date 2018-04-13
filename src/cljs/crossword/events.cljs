@@ -80,6 +80,7 @@
                                     string/upper-case)
                                 ""))]
       {:db          new-state
+       :dispatch    [:core/reset-check row col]
        :storage/set {:session? false
                      :name     :cows-crossword/db
                      :value    new-state}})))
@@ -131,8 +132,7 @@
   [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
   (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code ctrl-key?]]
     (let [orientation (:core/orientation db)
-          size        (get-in db [:core/puzzle :size])
-          answer?     (answer-code? key-code)]
+          size        (get-in db [:core/puzzle :size])]
       {:db         (case key-code
                      32 (update db :core/orientation flip-orientation)
                      37 (assoc db :core/orientation :row)
@@ -140,11 +140,15 @@
                      38 (assoc db :core/orientation :col)
                      40 (assoc db :core/orientation :col)
                      db)
-       :dispatch-n [(when answer? [:core/set-answer row col (if (delete-code? key-code) "" (char key-code))])
-                    (when answer? [:core/reset-check row col])
-                    (when (and ctrl-key? (= key-code 74)) [:core/check-answers])
-                    (when (and ctrl-key? (= key-code 75)) [:core/set-answer row col
-                                                           (get-in puzzle-for-display [row col :answer])])
+       :dispatch-n [(cond (and ctrl-key? (= key-code 74))
+                          [:core/check-answers]
+
+                          (and ctrl-key? (= key-code 75))
+                          [:core/set-answer row col
+                           (get-in puzzle-for-display [row col :answer])]
+
+                          (answer-code? key-code)
+                          [:core/set-answer row col (if (delete-code? key-code) "" (char key-code))])
                     [:core/set-active-cell (cond
                                              (= 37 key-code) (move size puzzle-for-display row col :row -1 1)
                                              (= 38 key-code) (move size puzzle-for-display row col :col -1 1)
