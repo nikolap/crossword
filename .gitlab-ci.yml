@@ -7,5 +7,7 @@ pages:
   artifacts:
     paths:
       - resources/public
+      - resources/public/js
+      - resources/public/css
   only:
     - master
