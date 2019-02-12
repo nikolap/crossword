@@ -68,7 +68,6 @@ ol, ul {
     border: 1px solid #cdcdcd;
     padding: 0;
     margin: 0;
-    background-color: #333;
     position: relative;
     cursor: pointer;
 }
@@ -77,8 +76,11 @@ ol, ul {
     background-color: #000;
 }
 
-.circle {
-
+.circle:before {
+  content: ' \25CB';
+  font-size: 78px;
+  position: absolute;
+  top: -41px;
 }
 
 .number {

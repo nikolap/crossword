@@ -17,7 +17,10 @@
         {:value       @date
          :id          "date"
          :placeholder "YYYY-MM-DD"
-         :on-change   #(reset! date (utils/target-value %))}]
+         :on-change   #(reset! date (utils/target-value %))
+         :on-key-down (fn [e]
+                        (when (= (.-keyCode e) 13)
+                          (re-frame/dispatch [:core/get-puzzle @date])))}]
        [:div
         [:button
          {:on-click #(re-frame/dispatch [:core/get-puzzle @date])}
@@ -36,7 +39,7 @@
   (let [current     (re-frame/subscribe [:core/get-answer r-idx c-idx])
         active-cell (re-frame/subscribe [:core/active-cell])
         active-clue (re-frame/subscribe [:core/active-clue])]
-    (fn [r-idx c-idx {:keys [black? num circle? across-clue down-clue correct?]}]
+    (fn [r-idx c-idx {:keys [black? letters num circle? across-clue down-clue correct?]}]
       [:td.cell
        {:class (str (when circle? "circle ")
                     (if black? "black " "cell ")
@@ -58,11 +61,19 @@
                             (when (or (and ctrl-key? (= key-code 74))
                                       (and ctrl-key? (= key-code 75)))
                               (.preventDefault e))
-                            (re-frame/dispatch [:core/handle-key-down r-idx c-idx key-code ctrl-key?])))
+                            (re-frame/dispatch [:core/handle-key-down r-idx c-idx key-code ctrl-key? @current letters])))
            :data-x      r-idx
            :data-y      c-idx}])
        (when-not black?
-         [:span.number num])])))
+         [:span
+          [:span.number num]
+          (when (> letters 1)
+            [:span
+             {:style {:font-size "10px"
+                      :position  "absolute"
+                      :top       "-4px"
+                      :right     "0px"}}
+             (str " (" letters ")")])])])))
 
 (defn board-row [r-idx row]
   [:tr.row
@@ -93,7 +104,8 @@
                         (when (= @opposite-clue full-clue) "clue-highlighted"))
         :data-clue full-clue}
        [:span.clue-num grid-num]
-       [:span.clue-text clue-text]])))
+       [:span.clue-text
+        {:dangerouslySetInnerHTML {:__html clue-text}}]])))
 
 (defn clue-list [label items id]
   [:div.column.clue-container

@@ -75,7 +75,6 @@
                               [:core/answers row col]
                               (if (re-find utils/alpha-regex ans)
                                 (-> ans
-                                    last
                                     str
                                     string/upper-case)
                                 ""))]
@@ -102,9 +101,9 @@
         new-y        (if (= orientation :col) col (+ col total-change))]
     (cond
       (< new-x 0) (move size puzzle (dec rows) (dec col) orientation change 0)
-      (>= new-x cols) (move size puzzle 0 (inc col) orientation change 0)
+      (>= new-x rows) (move size puzzle 0 (inc col) orientation change 0)
       (< new-y 0) (move size puzzle (dec row) (dec cols) orientation change 0)
-      (>= new-y rows) (move size puzzle (inc row) 0 orientation change 0)
+      (>= new-y cols) (move size puzzle (inc row) 0 orientation change 0)
       :else (if-let [{:keys [black?]} (get-in puzzle [new-x new-y])]
               (if black?
                 (move size puzzle row col orientation change (inc multiplier))
@@ -130,9 +129,10 @@
 (re-frame/reg-event-fx
   :core/handle-key-down
   [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
-  (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code ctrl-key?]]
+  (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code ctrl-key? current letters]]
     (let [orientation (:core/orientation db)
-          size        (get-in db [:core/puzzle :size])]
+          size        (get-in db [:core/puzzle :size])
+          current-count (count current)]
       {:db         (case key-code
                      32 (update db :core/orientation flip-orientation)
                      37 (assoc db :core/orientation :row)
@@ -148,14 +148,38 @@
                            (get-in puzzle-for-display [row col :answer])]
 
                           (answer-code? key-code)
-                          [:core/set-answer row col (if (delete-code? key-code) "" (char key-code))])
+                          [:core/set-answer row col (cond
+                                                      (and (delete-code? key-code)
+                                                           (> current-count 1))
+                                                      (subs current 0 (dec current-count))
+
+                                                      (delete-code? key-code)
+                                                      ""
+
+                                                      (and (> letters 1)
+                                                           (< current-count letters))
+                                                      (str current (char key-code))
+
+                                                      (and (> letters 1)
+                                                           (= current-count letters))
+                                                      (str (subs current 0 (dec current-count))
+                                                           (char key-code))
+
+                                                      :else
+                                                      (char key-code))])
                     [:core/set-active-cell (cond
                                              (= 37 key-code) (move size puzzle-for-display row col :row -1 1)
                                              (= 38 key-code) (move size puzzle-for-display row col :col -1 1)
                                              (= 39 key-code) (move size puzzle-for-display row col :row 1 1)
                                              (= 40 key-code) (move size puzzle-for-display row col :col 1 1)
-                                             (alpha-code? key-code) (move size puzzle-for-display row col orientation 1 1)
-                                             (= 8 key-code) (move size puzzle-for-display row col orientation -1 1)
+                                             (and (alpha-code? key-code)
+                                                  (not (and ctrl-key?
+                                                            (= key-code 74)))
+                                                  (= (inc current-count)
+                                                     letters)) (move size puzzle-for-display row col orientation 1 1)
+                                             (and (= 8 key-code)
+                                                  (= 1 current-count))
+                                             (move size puzzle-for-display row col orientation -1 1)
                                              :else [row col])]]})))
 
 (re-frame/reg-event-fx

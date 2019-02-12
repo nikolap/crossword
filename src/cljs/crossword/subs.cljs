@@ -27,6 +27,7 @@
            :black?  (= "." actual)
            :answer  actual
            :num     (if (= 0 num) nil num)
+           :letters (count actual)
            :circle? (= 1 circle)
            :correct? (get-in checks [row col])})
         (map-indexed list actual-row) num-row circle-row))
@@ -82,10 +83,10 @@
           (recur (inc x) 0 grid)
           grid)))))
 
-(defn insert-clues [grid {:keys [across down]} rows cols]
+(defn insert-clues [grid {:keys [across down]} cols]
   (-> grid
       (loop-row-clues across cols)
-      (loop-col-clues down rows)))
+      (loop-col-clues down cols)))
 
 (re-frame/reg-sub
   :core/get-answer
@@ -102,7 +103,6 @@
           circles (or circles (map (constantly 0) gridnums))]
       (insert-clues (ultimate-puzzle-data (partition cols grid) (partition cols gridnums) (partition cols circles) checks)
                     clues
-                    rows
                     cols))))
 
 (re-frame/reg-sub
