@@ -178,7 +178,7 @@
                                                   (= (inc current-count)
                                                      letters)) (move size puzzle-for-display row col orientation 1 1)
                                              (and (= 8 key-code)
-                                                  (= 1 current-count))
+                                                  (<= 1 current-count))
                                              (move size puzzle-for-display row col orientation -1 1)
                                              :else [row col])]]})))
 
