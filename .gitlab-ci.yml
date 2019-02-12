@@ -1,9 +1,11 @@
 pages:
   stage: deploy
   script:
+    - mkdir public
+    - cp -a resources/public/* public/
     - echo 'Nothing to do...'
   artifacts:
     paths:
-      - resources/public
+      - public
   only:
     - master
