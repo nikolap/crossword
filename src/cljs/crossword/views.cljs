@@ -6,29 +6,39 @@
             [crossword.utils :as utils]))
 
 (defn settings-panel []
-  (let [date (reagent/atom "")]
+  (let [date       (reagent/atom "")
+        collapsed? (reagent/atom false)]
     (fn []
-      [:div.row>div.column
-       [:h1 "Word."]
-       [:label
-        {:for "date"}
-        "Enter YYYY-MM-DD or 'current' or 'random' without quotes. e.g. 2018-01-15 or current or random"]
-       [:input
-        {:value       @date
-         :id          "date"
-         :placeholder "YYYY-MM-DD"
-         :on-change   #(reset! date (utils/target-value %))
-         :on-key-down (fn [e]
-                        (when (= (.-keyCode e) 13)
-                          (re-frame/dispatch [:core/get-puzzle @date])))}]
-       [:div
+      (if @collapsed?
         [:button
-         {:on-click #(re-frame/dispatch [:core/get-puzzle @date])}
-         "Load"]
-        [:button
-         {:on-click #(re-frame/dispatch [:core/check-answers])}
-         "Check Answers (Ctrl+J)"]
-        [:p "Hit Ctrl+K to reveal a cell's letter/answer."]]])))
+         {:on-click #(reset! collapsed? false)}
+         "Expand"]
+        [:div.row>div.column
+         [:h1 "Word."]
+         [:label
+          {:for "date"}
+          "Enter YYYY-MM-DD or 'current' or 'random' without quotes. e.g. 2018-01-15 or current or random"]
+         [:input
+          {:value       @date
+           :id          "date"
+           :placeholder "YYYY-MM-DD"
+           :on-change   #(reset! date (utils/target-value %))
+           :on-key-down (fn [e]
+                          (when (= (.-keyCode e) 13)
+                            (re-frame/dispatch [:core/get-puzzle @date])))}]
+         [:div
+          [:button
+           {:on-click (fn []
+                        (re-frame/dispatch [:core/get-puzzle @date])
+                        (reset! collapsed? true))}
+           "Load"]
+          [:button
+           {:on-click #(re-frame/dispatch [:core/check-answers])}
+           "Check Answers (Ctrl+J)"]
+          [:button
+           {:on-click #(reset! collapsed? true)}
+           "Collapse"]
+          [:p "Hit Ctrl+K to reveal a cell's letter/answer."]]]))))
 
 (defn clue-panel []
   (let [active-clue (re-frame/subscribe [:core/active-clue])]

@@ -172,14 +172,20 @@
                                              (= 38 key-code) (move size puzzle-for-display row col :col -1 1)
                                              (= 39 key-code) (move size puzzle-for-display row col :row 1 1)
                                              (= 40 key-code) (move size puzzle-for-display row col :col 1 1)
+
                                              (and (alpha-code? key-code)
                                                   (not (and ctrl-key?
                                                             (= key-code 74)))
-                                                  (= (inc current-count)
-                                                     letters)) (move size puzzle-for-display row col orientation 1 1)
+                                                  (or (= (inc current-count)
+                                                         letters)
+                                                      (and (= 1 current-count)
+                                                           (= 1 letters))))
+                                             (move size puzzle-for-display row col orientation 1 1)
+
                                              (and (= 8 key-code)
                                                   (<= current-count 1))
                                              (move size puzzle-for-display row col orientation -1 1)
+
                                              :else [row col])]]})))
 
 (re-frame/reg-event-fx
