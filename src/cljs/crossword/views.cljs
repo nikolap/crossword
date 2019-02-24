@@ -14,7 +14,7 @@
          {:on-click #(reset! collapsed? false)}
          "Expand"]
         [:div.row>div.column
-         [:h1 "Word."]
+         [:h1 "Cows Like Crosswords Too"]
          [:label
           {:for "date"}
           "Enter YYYY-MM-DD or 'current' or 'random' without quotes. e.g. 2018-01-15 or current or random"]
@@ -41,9 +41,22 @@
           [:p "Hit Ctrl+K to reveal a cell's letter/answer."]]]))))
 
 (defn clue-panel []
-  (let [active-clue (re-frame/subscribe [:core/active-clue])]
-    (fn []
-      [:div.active-clue-panel (or @active-clue "<no clue selected>")])))
+  (let [active-clue (re-frame/subscribe [:core/active-clue])
+        sticky?     (reagent/atom false)]
+    (reagent/create-class
+      {:component-did-mount
+       (fn [this]
+         (let [node   (reagent/dom-node this)
+               sticky (.-offsetTop node)]
+           (set! (.-onscroll js/window)
+                 (fn []
+                   (reset! sticky?
+                           (> (.-pageYOffset js/window) sticky))))))
+       :reagent-render
+       (fn []
+         [:div.active-clue-panel
+          {:class (when @sticky? "sticky")
+           :dangerouslySetInnerHTML {:__html (or @active-clue "[no clue selected]")}}])})))
 
 (defn board-cell [r-idx c-idx _]
   (let [current     (re-frame/subscribe [:core/get-answer r-idx c-idx])
@@ -151,7 +164,17 @@
     [clues-panel puzzle]]
    [:div.row
     [:div.column>small "Copyright " copyright]
-    [:div.column>small "Author " [:strong author] ", Editor " [:strong editor]]]])
+    [:div.column>small "Author " [:strong author] ", Editor " [:strong editor]]
+    [:div.column>small
+     "Cows Like Crosswords Too by "
+     [:strong>a {:href   "http://nikperic.com"
+          :target "_blank"}
+      "Nik Peric"]
+     ". Open source development under MIT License at "
+     [:strong>a {:href   "https://gitlab.com/nikperic/crossword"
+          :target "_blank"}
+      "Gitlab"]
+     "."]]])
 
 (defn main-panel []
   (let [puzzle (re-frame/subscribe [:core/puzzle])]

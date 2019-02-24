@@ -116,6 +116,8 @@ ol, ul {
     position: relative;
     top: -10px;
     font-weight: bold;
+    z-index: 100;
+    background-color: #fff;
 }
 
 .incorrect-answer input {
@@ -128,4 +130,10 @@ ol, ul {
 
 .active-cell input {
     background-color: #ffff58;
+}
+
+.sticky {
+  position: fixed;
+  top: 0;
+  width: 100%
 }

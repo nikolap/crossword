@@ -6,7 +6,8 @@
                  [cljs-ajax "0.7.3"]
                  [reframe-utils "0.2.0"]
                  [re-frame-utils "0.1.0"]
-                 [com.degel/re-frame-storage-fx "0.1.0"]]
+                 [com.degel/re-frame-storage-fx "0.1.0"]
+                 [javax.xml.bind/jaxb-api "2.3.1"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]]
 
