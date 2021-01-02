@@ -2,7 +2,7 @@
 
 A [re-frame](https://github.com/Day8/re-frame) application to play crosswords (from the NYT).
 
-See https://s3.amazonaws.com/nikolaperic-public/crossword/index.html to play demo or clone and make your own tweaks.
+See https://nikperic.gitlab.io/crossword to play a crossword, or clone and make your own tweaks.
 
 ## Development Mode
 
