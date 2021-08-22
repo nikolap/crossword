@@ -7,4 +7,4 @@
 
 (def clue-num-regex #"^(\d+?)\.")
 (def clue-text-regex #"^\d+?\.\s(.+?)$")
-(def alpha-regex #"[a-zA-Z]")
+(def alpha-regex #"[a-zA-Z0-9]")

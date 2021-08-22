@@ -95,18 +95,18 @@
 (defn flip-orientation [orientation]
   (if (= :row orientation) :col :row))
 
-(defn move [{:keys [rows cols] :as size} puzzle row col orientation change multiplier]
+(defn move [{:keys [rows cols] :as size} puzzle row col orientation change multiplier rollover?]
   (let [total-change (* multiplier change)
         new-x        (if (= orientation :row) row (+ row total-change))
         new-y        (if (= orientation :col) col (+ col total-change))]
     (cond
-      (< new-x 0) (move size puzzle (dec rows) (dec col) orientation change 0)
-      (>= new-x rows) (move size puzzle 0 (inc col) orientation change 0)
-      (< new-y 0) (move size puzzle (dec row) (dec cols) orientation change 0)
-      (>= new-y cols) (move size puzzle (inc row) 0 orientation change 0)
+      (< new-x 0) (move size puzzle (dec rows) (if rollover? col (dec col)) orientation change 0 true)
+      (>= new-x rows) (move size puzzle 0 (if rollover? 0 (inc col)) orientation change 0 true)
+      (< new-y 0) (move size puzzle (if rollover? row (dec row)) (dec cols) orientation change 0 true)
+      (>= new-y cols) (move size puzzle (if rollover? 0 (inc row)) 0 orientation change 0 true)
       :else (if-let [{:keys [black?]} (get-in puzzle [new-x new-y])]
               (if black?
-                (move size puzzle row col orientation change (inc multiplier))
+                (move size puzzle row col orientation change (inc multiplier) rollover?)
                 [new-x new-y])
               [row col]))))
 
@@ -117,8 +117,18 @@
   (and (>= key-code 65)
        (<= key-code 90)))
 
+(defn numeric-code? [key-code]
+  (or
+    ;; non-keypad
+    (and (>= key-code 48)
+         (<= key-code 57))
+    ;; keypad
+    (and (>= key-code 96)
+         (<= key-code 105))))
+
 (defn answer-code? [key-code]
   (or (alpha-code? key-code)
+      (numeric-code? key-code)
       (delete-code? key-code)))
 
 (re-frame/reg-event-db
@@ -130,8 +140,8 @@
   :core/handle-key-down
   [(re-frame/inject-cofx ::inject/sub [:core/puzzle-for-display])]
   (fn [{:keys [db core/puzzle-for-display]} [_ row col key-code ctrl-key? current letters]]
-    (let [orientation (:core/orientation db)
-          size        (get-in db [:core/puzzle :size])
+    (let [orientation   (:core/orientation db)
+          size          (get-in db [:core/puzzle :size])
           current-count (count current)]
       {:db         (case key-code
                      32 (update db :core/orientation flip-orientation)
@@ -168,23 +178,24 @@
                                                       :else
                                                       (char key-code))])
                     [:core/set-active-cell (cond
-                                             (= 37 key-code) (move size puzzle-for-display row col :row -1 1)
-                                             (= 38 key-code) (move size puzzle-for-display row col :col -1 1)
-                                             (= 39 key-code) (move size puzzle-for-display row col :row 1 1)
-                                             (= 40 key-code) (move size puzzle-for-display row col :col 1 1)
+                                             (= 37 key-code) (move size puzzle-for-display row col :row -1 1 false)
+                                             (= 38 key-code) (move size puzzle-for-display row col :col -1 1 false)
+                                             (= 39 key-code) (move size puzzle-for-display row col :row 1 1 false)
+                                             (= 40 key-code) (move size puzzle-for-display row col :col 1 1 false)
 
-                                             (and (alpha-code? key-code)
+                                             (and (or (alpha-code? key-code)
+                                                      (numeric-code? key-code))
                                                   (not (and ctrl-key?
                                                             (= key-code 74)))
                                                   (or (= (inc current-count)
                                                          letters)
                                                       (and (= 1 current-count)
                                                            (= 1 letters))))
-                                             (move size puzzle-for-display row col orientation 1 1)
+                                             (move size puzzle-for-display row col orientation 1 1 false)
 
                                              (and (= 8 key-code)
                                                   (<= current-count 1))
-                                             (move size puzzle-for-display row col orientation -1 1)
+                                             (move size puzzle-for-display row col orientation -1 1 false)
 
                                              :else [row col])]]})))
 
